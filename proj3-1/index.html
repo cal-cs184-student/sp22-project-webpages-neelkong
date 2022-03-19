@@ -1,7 +1,278 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-1 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Neel Choudhary  |  CS-184-p3-1-pathtracer-sp22-blufys</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3: PathTracer</h1>
+    <h2 align="middle">Neel Choudhary</h2>
+
+    <div class="padded">
+        <p>In this project, I implemented several crucial implementations that gradually allowed me to render and produce more realistic, clean looking images. I began with just normal shading and focusing on detecting when a ray would interesct with either a triangel or a sphere. I utilized concepts from past projects like barycentric coordinates when I was working with the resulting values from the Moller Trumbore algorithm. From there, I turned my focus to methods of acceleration to make rendering my images faster. I implemented a bounding volume hierarchy and perfected my creation of bounding boxes around the primitives I was interested in. Now that I was able to detect when a ray would hit the object I implemented several lighting methods to depict the subjects of the scene in a more realistic way. These included hemisphere sampling, direct light sampling, indirect, and global illumination lighting. At the end, I fine tuned the focus of my program to dedicate more samples to the areas of an image that were most complex using adaptive sampling. I honestly learned so much throughout the course of this project, it was a true journey. I really enjoyed being able to see the visualization of all my work in the images I rendered and in the Debugger GUI that was provided by the lovely course staff. At the end, it was the most rewarding experience I have ever had seeing after completing a CS project when I saw my bunny rendered in its full glory.</p>
+
+    <h2 align="middle">Part 1: Ray Generation and Intersection</h2>
+        <p>I began by scaling the x coordinates that were given by the rectangle border dimensions. I then took their complement and scaled it by the other side of the rectangle’s dimensions in a way that was a little reminiscent of barycentric coordinates. From there, I formed a point with a z element of -1 because the sensor is 1 unit along the z axis behind the camera’s origin.<p>
+
+    <p>After this, I converted both the calculated point and the camera’s origin to world space by multiplying them by the camera-to-world-space rotation matrix. <p>
+
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/Task_1.3.png" width="480px" />
+                    <figcaption align="middle">Empty Cornell Box with Normal Shading</figcaption>
+                    <td align="right">
+                    <img src="./images/Task_1.4.png" width="480px" />
+                    <figcaption align="middle">Cornell Box containing two spheres with normal shading</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <p>When processing the triangle intersections, I utilized the Moller-Trumbore algorithm which is a well known triangle-intersection algorithm. For the intersect method part I filled an intersection structure with all the necessary values. Among these was the normal of the triangle plane that I calculated using barycentric coordinates based on the resulting values from Moller-Trumbore.<p>
+    
+    <p>When processing the sphere intersections, I solved for the time when the ray intersects the sphere, t, using an equation from lecture slides. I then found the difference between the two t values that I found and the origin. There are two t values since it is possible for a ray to intersect with the surface with a sphere once when it is entering and once when it is exiting. I set t equal to the smaller of these values which is the earlier time when the ray first intersects with the sphere and filled the intersection structure with that value. The intersection structure for spheres also requests the normal vector from the intersection point to the center which I found by taking the difference between the two.
+</p>
+
+
+<h2 align="middle">Part 2: Bounding Volume Hierarchy</h2>
+
+<p>First, I found the lengths of each axis of the bounding box. I determined which axis was the longest and decided to split along that axis. I iterated through all primitives within the bounding box and took the average of their centroid’s positions. During this iteration I also determined which primitive had the “left-most” centroid value.<p>
+
+    <p>I decided to use a heuristic in which I choose the splitting point to be along the longest axis of the box and at the place indicated by the correct dimension of the average centroid point I calculated earlier. From there, I ran a partition method to split the primitives into two groups based on which side of the split point they were on. I also made sure to always put the “left-most” primitive on the left to ensure that there was at least one primitive on each side to counteract infinite recursion edge cases. I explored the node’s left and right nodes all the way until the number of primitives in their bounding box was less than the max_leaf_size. When this happened I considered the node as a leaf node so I set the appropriate parameters to values and returned the node up the recursive stack.<p>
+
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/Task_2.png" width="480px" />
+                    <figcaption align="middle">A cute cow rendered with BVHAccel</figcaption>
+                    <td align="right">
+                    <img src="./images/Task_2-1.png" width="480px" />
+                    <figcaption align="middle">Max Planck, rendering with BVHAccel still took a substantial amount of time</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <p>The runtime of the geometries was significantly faster when using BVH Accel versus not. Rendering normally took about three times as long as BVHAccel.<p>
+
+            <p>The BVH data structure saves many extra iterations by flagging whether a ray does not intersect anymore primitives early while also recursively covering every intersection case in a clean wrapping. The max_planck image that had tens of thousands of triangles to process displayed the largest difference in rendering time. The greater the magnitude of material to render, the more time that BVH acceleration is able to save.<p>
+
+
+
+<h2 align="middle">Part 3: Direct Illumination</h2>
+
+<p>For the estimate_direct_lighting_hemisphere lighting function, I began by initializing my variables. From there I iterated through a set number of samples where I took a sample from a uniform hemisphere distribution. With each sample, I detected whether the ray hit an object. If it did, I used the reflection equation to calculate the total direct lighting at that intersection.<p>
+
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/Task34both.png" width="480px" />
+                    <figcaption align="middle">CBBunny.dae rendered with both implementations of the direct lighting function.</figcaption>
+                    <td align="right">
+                    <img src="./images/Dragonboth.png" width="480px" />
+                    <figcaption align="middle">dragon.dae rendered with both implementations of the direct lighting function.</figcaption>
+                </tr>
+            </table>
+        </div>
+<p>Throughout this process, it was very important to be aware which variables I was working with were in their object space form and which were in the world space form. After iterating through the for loop and collecting enough samples, I averaged the total number of light by dividing it by the total number of samples. I also normalized it by the pdf.<p>
+
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/Task33Bunny1.png" width="480px" />
+                    <figcaption align="middle">Hemisphere Sampling of CBBunny.dae with 1 light ray</figcaption>
+                    <td align="right">
+                    <img src="./images/Task33Bunny4.png" width="480px" />
+                    <figcaption align="middle">Hemisphere Sampling of CBBunny.dae with 4 light rays</figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/Task33Bunny16.png" width="480px" />
+                    <figcaption align="middle">Hemisphere Sampling of CBBunny.dae with 16 light rays</figcaption>
+                    <td align="right">
+                    <img src="./images/Task33Bunny64.png" width="480px" />
+                    <figcaption align="middle">Hemisphere Sampling of CBBunny.dae with 64 light rays</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <p>For the estimate_direct_lighting_importance function, I initialized mostly the same variables. However, instead of just taking samples like I did in the hemisphere function I iterated through every light in the scene. For each light, I determined whether it was a point light. In the case that it was, that meant that only one sample would be necessary since all samples taken from a point light would be the same. Otherwise, I took samples from each light equal to the provided ns_area_light value. For each sample, I applied them to the monte carlo estimate equations related to importance sampling. Like previous parts, I made sure to convert my rays to the proper form between object space and world space. When constructing my ray I set its minimum t value to EPS_F to allow for a margin of inaccuracy as well.<p>
+
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/Task341.png" width="480px" />
+                    <figcaption align="middle">Light Sampling of CBBunny.dae with 1 light ray</figcaption>
+                    <td align="right">
+                    <img src="./images/Task344.png" width="480px" />
+                    <figcaption align="middle">Light Sampling of CBBunny.dae with 4 light rays</figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/Task3416.png" width="480px" />
+                    <figcaption align="middle">Light Sampling of CBBunny.dae with 16 light rays</figcaption>
+                    <td align="right">
+                    <img src="./images/Task3464.png" width="480px" />
+                    <figcaption align="middle">Light Sampling of CBBunny.dae with 64 light rays</figcaption>
+                </tr>
+            </table>
+        </div>
+        <p>It is unmistakable that using both implementations of the direct lighting function yields the best looking image when compared to only using either one alone. However, when comparing between uniform hemisphere sampling and light sampling, I notice that direct light sampling has a lot more noise in the images rendered using it. The lighting seems a little pixelated while the hemisphere sampling makes the bunny appear much more roundly lit.<p>
+
+<h2 align="middle">Part 4: Global Illumination</h2>
+
+<p>First, I made sure my implementation was equipped to accordingly deal with infinite recursion. I put a base case in place to ensure the lighting method only underwent a number of recursions equal to the max_depth parameter. Aside from this base case, I implemented random probability, Russian Roulette, to determine whether to continue taking samples. <p>
+    <p>Aside from this, I changed the sample_f method so that it provided values to pointers corresponding to the pdf of the sampler and a ray in object space. If the ray hit a primitive then I applied the global illumination equation to add to the total amount of light. <p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/task4JUSTHEMI.png" width="480px" />
+                    <figcaption align="middle">Lambertian Spheres in a Cornell Box rendered with only direct illumination (1024 Samples per pixel)</figcaption>
+                    <td align="right">
+                    <img src="./images/task4NOHEMI.png" width="480px" />
+                    <figcaption align="middle">Lambertian Spheres in a Cornell Box rendered with only indirect illumination (1024 Samples per pixel)</figcaption>
+                </tr>
+            </table>
+        </div>
+        <p> I also rendered the spheres with global illumination which turned out very well.<p>
+            <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="./images/spheres.png" width="480px" />
+                    <figcaption align="middle">Wonderfully shaded spheres</figcaption>
+                </tr>
+            </table>
+        </div>
+        <p>When comparing rendered views of CBbunny.dae with max_ray_depth set to 0, 1, 2, 3, and 100 I observed:<p>
+            <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/task4m0.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 0 (1024 Samples per pixel)</figcaption>
+                    <td align="right">
+                    <img src="./images/task4m1.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 1 (1024 Samples per pixel)</figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/task4m2.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 2 (1024 Samples per pixel)</figcaption>
+                    <td align="right">
+                    <img src="./images/task4m3.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 3 (1024 Samples per pixel)</figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="./images/task4m100.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 100! (1024 Samples per pixel)</figcaption>
+                </tr>
+            </table>
+        </div>
+
+<p> When experimenting with how setting the sample-per-pixel rates to different values I observed the following:<p>
+
+            <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/spheres_task4_1.png" width="480px" />
+                    <figcaption align="middle">Lambertian Spheres rendered with </figcaption>
+                    <td align="right">
+                    <img src="./images/spheres_task4_2.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 1 (1024 Samples per pixel)</figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/spheres_task4_4.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 2 (1024 Samples per pixel)</figcaption>
+                    <td align="right">
+                    <img src="./images/spheres_task4_8.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 3 (1024 Samples per pixel)</figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/spheres_task4_16.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 2 (1024 Samples per pixel)</figcaption>
+                    <td align="right">
+                    <img src="./images/spheres_task4_64.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 3 (1024 Samples per pixel)</figcaption>
+                </tr>
+            </table>
+        </div>
+        <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="./images/spheres_task4_1024.png" width="480px" />
+                    <figcaption align="middle">CBbunny.dae rendered with max_ray_depth of 100! (1024 Samples per pixel)</figcaption>
+                </tr>
+            </table>
+        </div>
+
+
+<h2 align="middle">Part 5: Adaptive Sampling</h2>
+
+<p>My adaptive sampling implementation checks whether the pixel of the current iteration converges. This helps concentrate our processing power and sampling towards more complicated portions of the image to reduce noise! Each time a pixel was found to have converged, I applied the adaptive sampling formula to the data of that iteration based on my calculations from previous iterations. At the end, I normalized and returned the values.<p>
+
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./images/Task5.png" width="480px" />
+                    <figcaption align="middle">A beautiful render of the CBbunny.dae file using 1 sample per light, 5 for max_ray_depth, and 2048 samples per pixel</figcaption>
+                    <td align="right">
+                    <img src="./images/bunnyrate.png" width="480px" />
+                    <figcaption align="middle">Rate image paired with render</figcaption>
+                </tr>
+            </table>
+        </div>
+<p>Thank you to the course staff for making such a comprehensive spec and cool GUI. I was going through a lot of emotional strain during the time I was working on this project but CS 184 really helped me focus my thoughts and feel productive. <p>
+    <h2 align="middle">A Few Notes On Webpages</h2>
+</div>
+</body>
 </html>
+
+
+
+
