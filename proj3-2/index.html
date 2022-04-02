@@ -1,7 +1,166 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Neel Choudhary  |  CS 184-neelkong</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3-2: PathTracer</h1>
+    <h2 align="middle">Neel Choudhary</h2>
+
+    <div class="padded">
+        <p>In this project, I implemented the ability to realistically render objects of certain materials. I chose to complete parts 1 and 2 which cover mirrors, glass, and microfacet materials like copper. I approached each part with the same initial procedure, I gathered the necessary angles between vectors that were important to the problem. After that, I followed the equations provided in the spec.</p>
+        <p>One problem I encountered was being able to properly picture 3D vectors in space. Throughout the reflection part of the assignment, I definitely learned how to work with the vectors in my mind better. I also drew them out on a paper to help my visualization. <p>
+            <p>Another problem I had was figuring out the polarity of certain vector features. I solved this by implementing if statements to check for irregularities and correct them if need be.<p>
+
+    <h2 align="middle">Part 1: Reflection, Mirrors, Refraction, and Glass</h2>
+        <p>First I built in the ability to render reflections and accurately calculate the way rays are reflected depending on the material they strike. Afterwards I did the same thing with the ability to render refractions.</p>
+        <p>In the end, I calculated Schlick’s approximation to decide what the ratio of reflections to refractions would be in the images I rendered.<p>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/part10.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBspheres with a max ray depth of 0, samples per pixel of 126, and 4 samples per light.</figcaption>
+      </td>
+      <td>
+        <img src="images/part11.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBspheres with a max ray depth of 1, samples per pixel of 126, and 4 samples per light.</figcaption>
+      </td>
+      <td>
+        <img src="images/part12.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBspheres with a max ray depth of 2, samples per pixel of 126, and 4 samples per light.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p> In the first image, there are zero bounces of light so nothing except the light itself is able to be seen. In the next image, where there is one bounce of light allowed, everything that is being directly lit by the ceiling light is illuminated since the light traveling from itself onto the object to the camera constitutes one bounce.<p>
+
+    <p>From there, more and more surfaces that are not directly facing the light become illuminated. For example, even with two bounces the front of the front sphere is not illuminated since it is in front of the light facing away from it. At the same time, the reflection effect becomes visible since light is able to travel onto the back sphere and then bounce towards the camera. <p>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/part13.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBspheres with a max ray depth of 3, samples per pixel of 126, and 4 samples per light.</figcaption>
+      </td>
+      <td>
+        <img src="images/part14.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBspheres with a max ray depth of 4, samples per pixel of 126, and 4 samples per light.</figcaption>
+      </td>
+      <td>
+        <img src="images/part15.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBspheres with a max ray depth of 5, samples per pixel of 126, and 4 samples per light.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/part100.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBspheres with a max ray depth of 100, samples per pixel of 126, and 4 samples per light.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>But once we allow three bounces the front of the sphere is lit up and with the final two images corresponding to max ray depths of 5 and 100 the scene gets slightly brighter from detailing light rays that have bounced around the room more.<p>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/glass_lucy.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBlucy.dae rendered with 256 samples per pixel, 4 samples per light, and max ray depth of 7.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p> I also rendered Lucy to show how rendering glass looks more. <p>
+<h2 align="middle">Part 2: Microfacet Surfaces</h2>
+
+<p>I began by implementing the evaluation function. It served as the final combination of all sub-methods relevant to the problem. The evaluation function included the normal distribution function, the Fresnel term, and the shadow-masking term. <p>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/part2point005.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBdragon_microfacet_au rendered with an alpha value of 0.005.</figcaption>
+      </td>
+      <td>
+        <img src="images/part2point05.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBdragon_microfacet_au rendered with an alpha value of 0.05.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>The lower the alpha value is, the shinier and less evenly lit the dragon becomes. At alpha values of 0.005 and 0.05, glints off the top of the dragon can very clearly be seen as well as darker shading on the underside of the dragon’s neck. The color of the dragon is mostly only able to be perceived around the glints of light that hit it. The rest of the body is much more covered by shadow.<p>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/part2point25.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBdragon_microfacet_au rendered with an alpha value of 0.25.</figcaption>
+      </td>
+      <td>
+        <img src="images/part2point5.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBdragon_microfacet_au rendered with an alpha value of 0.5</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>With alpha values of 0.25 and 0.5, the dragon becomes a lot more evenly lit. At 0.25 there is still a good amount of variance in brightness on the surface of the dragon. This image is the most realistic recreation of gold’s appearance. At 0.5, it takes on a matte look, although even at an alpha value of 0.5 glinting can still be observed on the dragon's back as well as slight shading on its neck. The dragon appears extremely smooth and the color content of its surface can be seen completely covering it.<p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/bunny_hem.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBbunny_microfacet_cu rendered with hemisphere sampling.</figcaption>
+      </td>
+      <td>
+        <img src="images/bunny_nothem.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBbunny_microfacet_cu rendered with importance sampling.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+    <p>Comparing the images of the bunny that were rendered using hemisphere sampling and importance sampling, there are some clear differences. The hemisphere sampling image displayed much brighter peaks on the glints located on the bunny’s back. The darker areas were also a lot darker. Overall, the hemisphere sampling was definitely stronger in terms of contrasting the light. However, at the same time there was much more noise present in the image.<p>
+
+        <p>When looking at the importance sampling, the majority of the surface of the bunny is very evenly lit and smooth. The glints had slightly more feathered out edges and integrated onto the surface of the bunny more smoothly and naturally. On the bunny’s right cheek, some dark shading can be spotted in the hemisphere-sampled image but there is no shading present at all in the importance-sampled image at that spot.<p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/bismuthdrag.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBdragon_microfacet_au rendered with eta and k values of Bismuth and an alpha value of 0.25</figcaption>
+      </td>
+      <td>
+        <img src="images/bismuthdragpoint5.png" align="middle" width="400px"/>
+        <figcaption align="middle">CBdragon_microfacet_au rendered with eta and k values of Bismuth and an alpha value of 0.5</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>I looked up the eta and k values for Bismuth and modeled them on the dragon image. Bismuth has an eta value of 6.5541 and a k value of 4.3562. I chose Bismuth because it was my favorite element when I was a kid!<p>
+
+</div>
+</body>
 </html>
+
+
+
+
