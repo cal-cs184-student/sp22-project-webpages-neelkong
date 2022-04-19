@@ -1,7 +1,275 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 4 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2022</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Neel Choudhary and Dakshina Palasamudrum, CS184-d-n</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>From a high level, this project included several key steps that progressively evolved our simulation closer and closer towards being able to realistically depict the way a cloth behaves. </p>
+<p>In part 1, it was important that we laid out a concise foundation for our grid. One issue we ran into during part 1 was correctly assigning the z-coordinate for each mass. As a result of the randomization function we were using, the value got truncated to 0 for a long period of time before we found the issue during our rendering of part 4.<p>
+  <p>Part 2 was more focused on implementing the basic essentials across all point masses. More specifically, this included calculating the resulting forces applied by external acceleration like gravity. Our approach was to follow the formulas provided in the spec and make sure we correctly changed the parameters of the objects. The last part was slightly more complex because it involved position correction. One issue we encountered was figuring out the magnitude of the correction vector we calculated. We took great care in figuring out whether to add or subtract the vector from the original position. There were also several more edge cases than we initially anticipated with our single if statement.<p>
+  <p>Part 3 was entirely involved with collisions. The implementation was composed of more correction-vector work like discussed previously. The main aspects that were important to be meticulous about were related to the magnitude of the vectors themselves.<p>
+    <p>Part 4 was particularly difficult for us. Our implementation required working with data structures that we were not familiar with and C++’s intricate pass by value system made debugging especially difficult. One problem we encountered was figuring out how to correctly iterate through the buckets within an unordered_map and how to mutate the parameters of the objects we iterated through. We solved them by taking the time to learn C++ on a deeper level to fully understand how to work with data structures.<p>
+    <p>Part 5 was particularly challenging because it required us to learn an entirely new language. Our implementation closely stuck to the equations provided in the spec. A problem we encountered was getting acquainted with the syntax of GLSL but we were able to solve it with more extensive research.<p>
+
+<h2 align="middle">Part 1: Masses and springs</h2>
+
+<div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./viewing_angle1.png" width="480px" />
+                    <figcaption align="middle">First viewing angle of pinned2.json</figcaption>
+                    <td align="right">
+                    <img src="./viewing_angle2.png" width="480px" />
+                    <figcaption align="middle">Second viewing angle of pinned2.json</figcaption>
+                </tr>
+            </table>
+        </div>
+<div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="./no_shearing.png" width="480px" />
+                    <figcaption align="middle">Image of no shearing constraints.</figcaption>
+                </tr>
+            </table>
+        </div>
+<div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./only_shearing.png" width="480px" />
+                    <figcaption align="middle">Image of only shearing constraints.</figcaption>
+                    <td align="right">
+                    <img src="./all_constraints.png" width="480px" />
+                    <figcaption align="middle">Image of all contraints.</figcaption>
+                </tr>
+            </table>
+        </div>
+<h2 align="middle">Part 2: Simulation via numerical integration</h2>
+<p>The effects of changing the constant ks: when ks is very low, the cloth acts in a very loose way and ripples can visibly be seen traveling from the center of each point outwards to the edges of the cloth. When the ks is very high, the cloth acts in a more tight manner as if it is being pulled a little more taut and is held together securely as one unit. It also feels a lot more elastic and bouncy. <p>
+<div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./low_ks.png" width="480px" />
+                    <figcaption align="middle">Image of pinned2.json with a low ks value.</figcaption>
+                    <td align="right">
+                    <img src="./high_ks.png" width="480px" />
+                    <figcaption align="middle">Image of pinned2.json with a high ks value.</figcaption>
+                </tr>
+            </table>
+        </div>
+<p>Density exhibits similar effects, although with an inverse relationship. When the density number is very high, the cloth appears especially loose and flimsy, bouncing all over the place and not holding up via the tension of the two pinned corners as much. As the density value is decreased, the tension of the pinned pointed seems to hold up the dip in the middle of the held up side of the cloth much more and the cloth keeps its original square shape. <p>
+  <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./low_density_resting.png" width="480px" />
+                    <figcaption align="middle">Image of pinned2.json with a low density value in its final resting state.</figcaption>
+                    <td align="right">
+                    <img src="./high_density_resting.png" width="480px" />
+                    <figcaption align="middle">Image of pinned2.json with a high density value in its final resting state.</figcaption>
+                </tr>
+            </table>
+        </div>
+<p>The higher the damping percentage, the much smoother and slower the cloth falls down. It almost seems as though it is dampening the reverberations of the cloth’s movement reflected in the rippling waves spreading across the cloth when it falls at low dampening percentage values. It is definitely much less realistic, and moves in a very smooth simulation-like way. When the dampening is low, the cloth folds and ripples in a very realistic bouncy way.
+<p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./low_damp.png" width="480px" />
+                    <figcaption align="middle">Image of pinned2.json with a low damping value.</figcaption>
+                    <td align="right">
+                    <img src="./high_damp.png" width="480px" />
+                    <figcaption align="middle">Image of pinned2.json with a high damping value.</figcaption>
+                </tr>
+            </table>
+        </div>
+<p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./pinned4_resting_shaded.png" width="480px" />
+                    <figcaption align="middle">Image of pinned4.json resting with the shaded view.</figcaption>
+                    <td align="right">
+                    <img src="./pinned4_resting_wireframe.png" width="480px" />
+                    <figcaption align="middle">Image of pinned4.json with the wireframe view.</figcaption>
+                </tr>
+            </table>
+        </div>
+<h2 align="middle">Part 3: Handling collisions with other objects.</h2>
+<p>The main differences between the three is the way in which the cloth is laid. We can see when ks=500, the cloth is very flat while in ks=50000 there is a lot more volume in the cloth, and ks=5000 looks the most realistic. <p>
+  <p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./ks_500.png" width="480px" />
+                    <figcaption align="middle">KS value of 500</figcaption>
+                    <td align="right">
+                    <img src="./ks_5000.png" width="480px" />
+                    <figcaption align="middle">KS value of 5000</figcaption>
+                </tr>
+            </table>
+        </div>
+  <p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="./ks_50000.png" width="480px" />
+                    <figcaption align="middle">KS value of 50000</figcaption>
+              
+                </tr>
+            </table>
+        </div>
+<p>Here is a picture of our cloth laying peacefully at rest on the plane.<p>
+    <p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="./cloth_on_plane.png" width="480px" />
+                    <figcaption align="middle">Cloth laying on plane at rest.</figcaption>
+              
+                </tr>
+            </table>
+        </div>
+<h2 align="middle">Part 4: Handling self-collisions.</h2>
+<p>Here are three screenshots documenting the cloth as it falls.<p>
+   <p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./early_fall.png" width="480px" />
+                    <figcaption align="middle">Early initial self-collison.</figcaption>
+                    <td align="right">
+                    <img src="./mid_fall.png" width="480px" />
+                    <figcaption align="middle">Mid-fall</figcaption>
+                </tr>
+            </table>
+        </div>
+  <p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="./final_fall.png" width="480px" />
+                    <figcaption align="middle">Cloth in a restful state at the end of the fall.</figcaption>
+              
+                </tr>
+            </table>
+        </div>
+<p>When the ks value is decreased, the cloth shows absolutely no micromovements or ripples from self collision. As can be seen in the image, once the cloth is at resting with a low ks value the cloth all sinks into a single line on the surface of the plane. In the previous images where the cloth has a normal / high ks value, the cloth lies on top of itself and folds upward.<p>
+  <p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./falling_low_ks.png" width="480px" />
+                    <figcaption align="middle">The cloth falling with a low ks value.</figcaption>
+                    <td align="right">
+                    <img src="./resting_low_ks.png" width="480px" />
+                    <figcaption align="middle">The cloth resting with a low ks value.</figcaption>
+                </tr>
+            </table>
+        </div>
+        <p>
+          <p>When the density value is high, the cloth has more small ripples and has a very natural look to it as it falls. When the density value is lower there are much wider large ripples and the cloth falls in an almost hypnotic way. It appears as though the surface of the cloth is not moving even if it is. Your mind does not process that the cloth was moving until it drops out of view.<p>
+    <div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./task4_low_dens.png" width="480px" />
+                    <figcaption align="middle">The cloth falling with a low density value.</figcaption>
+                    <td align="right">
+                    <img src="./task4_high_dens.png" width="480px" />
+                    <figcaption align="middle">The cloth falling with a high density value.</figcaption>
+                </tr>
+            </table>
+        </div>
+<h2 align="middle">Part 5: Shaders.</h2>
+<p>A shader is a program that gives code to the rendering pipeline, and two of these stages are vertex and fragment shaders. Since vertex shaders affect the geometry of the object and fragment shaders affect pixel color, working together, they are able to create lighting and material effects. <p>
+  <p>The Blinn-Phong shading model is a model with shading techniques that smoothes out surfaces and creates lighting effects more precise appearing. The model can be computed and implemented using this equation: L = ka*ia + kd(I/r^2) * max(0, n*l) + ks(I/r^2) max(0, n*h)^p and has three components, ambient, diffuse, and specular. The inputs of the model consist of viewer direction, surface normal, light direction, and surface parameters such as color or shininess. <p>
+<div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./ambient.png" width="480px" />
+                    <figcaption align="middle">The ambient component.</figcaption>
+                    <td align="right">
+                    <img src="./diffuse.png" width="480px" />
+                    <figcaption align="middle">The diffuse component.</figcaption>
+                </tr>
+            </table>
+        </div>
+<div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./specular.png" width="480px" />
+                    <figcaption align="middle">The specular component.</figcaption>
+                    <td align="right">
+                    <img src="./entire_blinn_phong.png" width="480px" />
+                    <figcaption align="middle">The entire Blinn-Phong model.</figcaption>
+                </tr>
+            </table>
+        </div>
+<div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./custom_texture.png" width="480px" />
+                    <figcaption align="middle">The custom texture we created.</figcaption>
+                    <td align="right">
+                    <img src="./png_image_used.png" width="480px" />
+                    <figcaption align="middle">The image used for the custom texture.</figcaption>
+                </tr>
+            </table>
+        </div>
+<div align="center">
+            <table style="width=100%">
+                <tr>
+                    <td align="left">
+                    <img src="./mirror1.png" width="480px" />
+                    <figcaption align="middle">Mirror shader on the cloth.</figcaption>
+                    <td align="right">
+                    <img src="./mirror2.png" width="480px" />
+                    <figcaption align="middle">Mirror shader on the sphere.</figcaption>
+                </tr>
+            </table>
+        </div>
+</body>
 </html>
